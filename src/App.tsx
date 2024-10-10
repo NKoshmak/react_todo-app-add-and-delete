@@ -23,9 +23,10 @@ export const App: React.FC = () => {
   const [filterType, setFilterType] = useState<FilterType>(FilterType.all);
   const [errorMessage, setErrorMessage] = useState<string | null>('');
 
-  const [newTitle, setNewTitle] = useState('');
+  const [newTodo, setNewTodo] = useState('');
   const [loading, setLoading] = useState(false);
-  const [addNewTodo, setAddNewTodo] = useState<Todo | null>(null);
+  const [isSubmitting, setIsSubmiting] = useState(false);
+  const [deletingTodoIds, setDeletingTodoIds] = useState<number[]>([]);
 
   const visibleTodos = getFilteredTodos(todosFromServer, filterType);
 
@@ -35,50 +36,56 @@ export const App: React.FC = () => {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    todoService
-      .getTodos()
-      .then(todos => setTodosFromServer(todos))
-      .catch(() => setErrorMessage('Unable to load todos'));
-  }, []);
-
-  useEffect(() => {
-    if (loading === false && !addNewTodo) {
-      inputRef.current?.focus();
-    }
-  }, [loading, addNewTodo]);
-
-  const handleDeleteTodo = (todoId: number) => {
     setLoading(true);
 
     todoService
+      .getTodos()
+      .then(todos => setTodosFromServer(todos))
+      .catch(() => setErrorMessage('Unable to load todos'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!isSubmitting && inputRef.current && !loading) {
+      inputRef.current.focus();
+    }
+  }, [isSubmitting, loading]);
+
+  const deleteTodo = (todoId: number) => {
+    setDeletingTodoIds(prevIds => [...prevIds, todoId]);
+    // console.log(deletingTodoIds);
+
+    setTodosFromServer(currentTodos =>
+      currentTodos.filter(todo => todo.id !== todoId),
+    );
+
+    return todoService
       .deleteTodo(todoId)
-      .then(() =>
-        setTodosFromServer(currentTodos =>
-          currentTodos.filter(todo => todo.id !== todoId),
-        ),
-      )
       .catch(() => {
+        setTodosFromServer(todosFromServer);
         setErrorMessage('Unable to delete a todo');
       })
-      .finally(() => setLoading(false));
+      .finally(() =>
+        setDeletingTodoIds(prevIds => prevIds.filter(tId => todoId !== tId)),
+      );
   };
 
   const addTodo = ({ title, completed, userId }: Todo) => {
-    todoService
-      .addTodo({ title, completed, userId })
-      .then(newTodo => {
-        setTodosFromServer(currentTodos => [...currentTodos, newTodo]);
-        setNewTitle('');
+    return todoService
+      .createTodo({ title, completed, userId })
+      .then(newTodoData => {
+        setTodosFromServer(prevTodos => [...prevTodos, newTodoData]);
+        setNewTodo('');
       })
       .catch(() => {
-        setErrorMessage('Unable to add todo');
+        setErrorMessage('Unable to add a todo');
       });
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const newTodoTitle = newTitle.trim();
+    const newTodoTitle = newTodo.trim();
 
     if (newTodoTitle === '') {
       setErrorMessage('Title should not be empty');
@@ -86,17 +93,26 @@ export const App: React.FC = () => {
       return;
     }
 
-    const newTodo = {
+    const newTodoItem = {
       id: +new Date(),
       title: newTodoTitle,
       completed: false,
       userId: USER_ID,
     };
 
-    setAddNewTodo(newTodo);
+    setIsSubmiting(true);
 
-    addTodo(newTodo);
-    setAddNewTodo(null);
+    addTodo(newTodoItem).finally(() => setIsSubmiting(false));
+  };
+
+  const deleteAllCompleted = () => {
+    if (completedTodos.length === 0) {
+      return;
+    }
+
+    completedTodos.map(todo => deleteTodo(todo.id));
+
+    setTodosFromServer(todosFromServer.filter(todo => !todo.completed));
   };
 
   if (errorMessage) {
@@ -128,10 +144,9 @@ export const App: React.FC = () => {
               type="text"
               className="todoapp__new-todo"
               placeholder="What needs to be done?"
-              value={newTitle}
-              // autoFocus
-              onChange={e => setNewTitle(e.target.value)}
-              disabled={!!addNewTodo}
+              value={newTodo}
+              onChange={e => setNewTodo(e.target.value)}
+              disabled={isSubmitting || loading}
             />
           </form>
         </header>
@@ -162,20 +177,25 @@ export const App: React.FC = () => {
                 type="button"
                 className="todo__remove"
                 data-cy="TodoDelete"
-                onClick={() => handleDeleteTodo(todo.id)}
+                onClick={() => deleteTodo(todo.id)}
               >
                 ×
               </button>
 
               {/* overlay will cover the todo while it is being deleted or updated */}
-              <div data-cy="TodoLoader" className="modal overlay">
+              <div
+                data-cy="TodoLoader"
+                className={cn('modal overlay', {
+                  'is-active': deletingTodoIds.includes(todo.id),
+                })}
+              >
                 <div className="modal-background has-background-white-ter" />
                 <div className="loader" />
               </div>
             </div>
           ))}
 
-          {addNewTodo && (
+          {isSubmitting && (
             // eslint-disable-next-line react/jsx-no-comment-textnodes
             <div data-cy="Todo" className="todo">
               // eslint-disable-next-line jsx-a11y/label-has-associated-control
@@ -188,9 +208,8 @@ export const App: React.FC = () => {
               </label>
 
               <span data-cy="TodoTitle" className="todo__title">
-                {newTitle}
+                {newTodo}
               </span>
-
               {/* Remove button appears only on hover */}
               <button
                 type="button"
@@ -257,6 +276,7 @@ export const App: React.FC = () => {
               className="todoapp__clear-completed"
               data-cy="ClearCompletedButton"
               disabled={completedTodos.length === 0}
+              onClick={deleteAllCompleted}
             >
               Clear completed
             </button>
@@ -275,12 +295,7 @@ export const App: React.FC = () => {
           },
         )}
       >
-        <button
-          data-cy="HideErrorButton"
-          type="button"
-          className="delete"
-          onClick={() => setErrorMessage('')}
-        />
+        <button data-cy="HideErrorButton" type="button" className="delete" />
         {/* show only one message at a time */}
         {errorMessage}
       </div>
