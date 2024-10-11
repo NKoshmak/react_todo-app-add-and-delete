@@ -28,12 +28,12 @@ export const App: React.FC = () => {
   const [isSubmitting, setIsSubmiting] = useState(false);
   const [deletingTodoIds, setDeletingTodoIds] = useState<number[]>([]);
 
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
   const visibleTodos = getFilteredTodos(todosFromServer, filterType);
 
   const unCompletedTodos = todosFromServer.filter(todo => !todo.completed);
   const completedTodos = todosFromServer.filter(todo => todo.completed);
-
-  const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -46,21 +46,21 @@ export const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!isSubmitting && inputRef.current && !loading) {
+    if (inputRef.current && !isSubmitting && !loading && deletingTodoIds) {
       inputRef.current.focus();
     }
-  }, [isSubmitting, loading]);
+  }, [isSubmitting, loading, deletingTodoIds]);
 
   const deleteTodo = (todoId: number) => {
     setDeletingTodoIds(prevIds => [...prevIds, todoId]);
-    // console.log(deletingTodoIds);
-
-    setTodosFromServer(currentTodos =>
-      currentTodos.filter(todo => todo.id !== todoId),
-    );
 
     return todoService
       .deleteTodo(todoId)
+      .then(() => {
+        setTodosFromServer(currentTodos =>
+          currentTodos.filter(todo => todo.id !== todoId),
+        );
+      })
       .catch(() => {
         setTodosFromServer(todosFromServer);
         setErrorMessage('Unable to delete a todo');
@@ -147,6 +147,7 @@ export const App: React.FC = () => {
               value={newTodo}
               onChange={e => setNewTodo(e.target.value)}
               disabled={isSubmitting || loading}
+              autoFocus
             />
           </form>
         </header>
@@ -206,7 +207,6 @@ export const App: React.FC = () => {
                   className="todo__status"
                 />
               </label>
-
               <span data-cy="TodoTitle" className="todo__title">
                 {newTodo}
               </span>
