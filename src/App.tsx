@@ -199,7 +199,6 @@ export const App: React.FC = () => {
           {isSubmitting && (
             // eslint-disable-next-line react/jsx-no-comment-textnodes
             <div data-cy="Todo" className="todo">
-              // eslint-disable-next-line jsx-a11y/label-has-associated-control
               <label className="todo__status-label">
                 <input
                   data-cy="TodoStatus"
