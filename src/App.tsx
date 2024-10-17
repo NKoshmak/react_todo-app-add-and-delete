@@ -31,6 +31,7 @@ export const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmiting] = useState(false);
   const [deletingTodoIds, setDeletingTodoIds] = useState<number[]>([]);
+  const [tempTodo, setTempTodo] = useState<Todo | null>(null);
 
   const visibleTodos = getFilteredTodos(todos, filterType);
   const unCompletedTodos = todos.filter(todo => !todo.completed);
@@ -65,9 +66,9 @@ export const App: React.FC = () => {
       );
   };
 
-  const addTodo = ({ title, completed, userId }: Todo) => {
+  const addTodo = (todo: Todo) => {
     return todoService
-      .createTodo({ title, completed, userId })
+      .createTodo(todo)
       .then(newTodoData => {
         setTodos(prevTodos => [...prevTodos, newTodoData]);
         setNewTodo('');
@@ -89,15 +90,20 @@ export const App: React.FC = () => {
     }
 
     const newTodoItem = {
-      id: +new Date(),
+      id: 0,
       title: newTodoTitle,
       completed: false,
       userId: USER_ID,
     };
 
+    setTempTodo(newTodoItem);
+
     setIsSubmiting(true);
 
-    addTodo(newTodoItem).finally(() => setIsSubmiting(false));
+    addTodo(newTodoItem).finally(() => {
+      setIsSubmiting(false);
+      setTempTodo(null);
+    });
   };
 
   const deleteAllCompleted = () => {
@@ -128,6 +134,7 @@ export const App: React.FC = () => {
           handleSubmit={handleSubmit}
           isSubmitting={isSubmitting}
           loading={loading}
+          tempTodo={tempTodo}
         />
         <TodoList
           todos={visibleTodos}

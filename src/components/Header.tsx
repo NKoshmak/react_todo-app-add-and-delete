@@ -1,5 +1,6 @@
 import cn from 'classnames';
 import { useEffect, useRef } from 'react';
+import { Todo } from '../types/Todo';
 
 type Props = {
   newTodo: string;
@@ -7,6 +8,7 @@ type Props = {
   handleSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   isSubmitting: boolean;
   loading: boolean;
+  tempTodo: Todo | null;
 };
 
 const Header: React.FC<Props> = ({
@@ -15,6 +17,7 @@ const Header: React.FC<Props> = ({
   handleSubmit,
   isSubmitting,
   loading,
+  tempTodo,
 }) => {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -22,7 +25,7 @@ const Header: React.FC<Props> = ({
     if (inputRef.current && !isSubmitting && !loading) {
       inputRef.current.focus();
     }
-  }, [isSubmitting, loading]);
+  }, [isSubmitting, loading, tempTodo]);
 
   return (
     <header className="todoapp__header">
