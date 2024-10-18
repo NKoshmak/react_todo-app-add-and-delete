@@ -1,14 +1,13 @@
 import cn from 'classnames';
 import { useEffect, useRef } from 'react';
-import { Todo } from '../types/Todo';
 
 type Props = {
   newTodo: string;
   setNewTodo: (value: string) => void;
   handleSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   isSubmitting: boolean;
-  loading: boolean;
-  tempTodo: Todo | null;
+  isLoading: boolean;
+  isTodoDeleted: boolean;
 };
 
 const Header: React.FC<Props> = ({
@@ -16,16 +15,16 @@ const Header: React.FC<Props> = ({
   setNewTodo,
   handleSubmit,
   isSubmitting,
-  loading,
-  tempTodo,
+  isLoading,
+  isTodoDeleted,
 }) => {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    if (inputRef.current && !isSubmitting && !loading) {
+    if (inputRef.current && !isSubmitting && !isLoading) {
       inputRef.current.focus();
     }
-  }, [isSubmitting, loading, tempTodo]);
+  }, [newTodo, isSubmitting, isLoading, isTodoDeleted]);
 
   return (
     <header className="todoapp__header">
@@ -45,7 +44,7 @@ const Header: React.FC<Props> = ({
           placeholder="What needs to be done?"
           value={newTodo}
           onChange={e => setNewTodo(e.target.value)}
-          disabled={isSubmitting || loading}
+          disabled={isSubmitting}
           autoFocus
         />
       </form>

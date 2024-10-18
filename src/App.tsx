@@ -28,24 +28,32 @@ export const App: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>('');
 
   const [newTodo, setNewTodo] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmiting] = useState(false);
   const [deletingTodoIds, setDeletingTodoIds] = useState<number[]>([]);
   const [tempTodo, setTempTodo] = useState<Todo | null>(null);
+  const [isTodoDeleted, setIsTodoDeleted] = useState(false);
 
   const visibleTodos = getFilteredTodos(todos, filterType);
+
   const unCompletedTodos = todos.filter(todo => !todo.completed);
   const completedTodos = todos.filter(todo => todo.completed);
 
   useEffect(() => {
-    setLoading(true);
+    setIsLoading(true);
 
     todoService
       .getTodos()
       .then(setTodos)
       .catch(() => setErrorMessage('Unable to load todos'))
-      .finally(() => setLoading(false));
+      .finally(() => setIsLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (isTodoDeleted) {
+      setIsTodoDeleted(false);
+    }
+  }, [isTodoDeleted]);
 
   const deleteTodo = (todoId: number) => {
     setDeletingTodoIds(prevIds => [...prevIds, todoId]);
@@ -56,14 +64,16 @@ export const App: React.FC = () => {
         setTodos(currentTodos =>
           currentTodos.filter(todo => todo.id !== todoId),
         );
+
+        setIsTodoDeleted(true);
       })
       .catch(() => {
         setTodos(todos);
         setErrorMessage('Unable to delete a todo');
       })
-      .finally(() =>
-        setDeletingTodoIds(prevIds => prevIds.filter(tId => todoId !== tId)),
-      );
+      .finally(() => {
+        setDeletingTodoIds(prevIds => prevIds.filter(tId => todoId !== tId));
+      });
   };
 
   const addTodo = (todo: Todo) => {
@@ -133,13 +143,14 @@ export const App: React.FC = () => {
           setNewTodo={setNewTodo}
           handleSubmit={handleSubmit}
           isSubmitting={isSubmitting}
-          loading={loading}
-          tempTodo={tempTodo}
+          isLoading={isLoading}
+          isTodoDeleted={isTodoDeleted}
         />
         <TodoList
           todos={visibleTodos}
           deleteTodo={deleteTodo}
           deletingTodoIds={deletingTodoIds}
+          tempTodo={tempTodo}
         />
         {todos.length > 0 && (
           <Footer

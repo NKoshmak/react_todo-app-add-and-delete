@@ -7,9 +7,15 @@ type Props = {
   todo: Todo;
   deleteTodo: (id: number) => void;
   deletingTodoIds: number[];
+  tempTodo?: Todo | null;
 };
 
-const TodoItem: React.FC<Props> = ({ todo, deleteTodo, deletingTodoIds }) => {
+const TodoItem: React.FC<Props> = ({
+  todo,
+  deleteTodo,
+  deletingTodoIds,
+  tempTodo,
+}) => {
   const { completed, id, title } = todo;
 
   return (
@@ -24,6 +30,7 @@ const TodoItem: React.FC<Props> = ({ todo, deleteTodo, deletingTodoIds }) => {
           type="checkbox"
           className="todo__status"
           checked={completed}
+          disabled={!!tempTodo}
         />
       </label>
       <span data-cy="TodoTitle" className="todo__title">
@@ -37,10 +44,11 @@ const TodoItem: React.FC<Props> = ({ todo, deleteTodo, deletingTodoIds }) => {
       >
         ×
       </button>
+
       <div
         data-cy="TodoLoader"
         className={cn('modal overlay', {
-          'is-active': deletingTodoIds.includes(id),
+          'is-active': deletingTodoIds.includes(id) || tempTodo,
         })}
       >
         <div className="modal-background has-background-white-ter" />
